@@ -7,18 +7,27 @@ branding:
 inputs:
   token:
     description: 'Github API token'
+    required: false
     default: ${{ github.token }}
   path:
     description: 'Path to Rust crate or workspace'
+    required: false
     default: '.'
   args:
     description: 'Extra arguments for cargo publish'
+    required: false
+    default: ''
+  registry:
+    description: 'Name of a third-party cargo registry to publish to'
+    required: false
     default: ''
   registry-token:
     description: 'Cargo registry token'
+    required: false
     default: ''
   dry-run:
     description: 'Skip execution cargo publish'
+    required: false
     default: 'false'
 runs:
   using: 'node12'

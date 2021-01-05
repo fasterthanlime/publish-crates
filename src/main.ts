@@ -17,7 +17,6 @@ async function run(): Promise<void> {
     const registry = getInput('registry')
     const registry_token = getInput('registry-token')
     const dry_run = getInput('dry-run') === 'true'
-    const wait = getInput('wait') !== 'false'
 
     const env: EnvVars = {...(process.env as EnvVars)}
     if (registry_token) {
@@ -68,17 +67,17 @@ async function run(): Promise<void> {
                 } else {
                     info(`Publishing package '${package_name}'`)
                     await exec('cargo', exec_args, exec_opts)
-                    if (wait) {
+                    if (registry) {
+                        info(
+                            `Don't know how to check if crate is in third-party registry ${registry}, not waiting...`
+                        )
+                    } else {
                         info(`Waiting for crate to show up in registry...`)
                         await awaitCrateVersion(
                             package_name,
                             package_info.version
                         )
                         info(`Package '${package_name}' published successfully`)
-                    } else {
-                        info(
-                            `Not waiting for crate to show up in registry ('wait: false' was specified)`
-                        )
                     }
                 }
             }
