@@ -176,12 +176,20 @@ function run() {
         const args = core_1.getInput('args')
             .split(/[\n\s]+/)
             .filter(arg => arg.length > 0);
+        const registry = core_1.getInput('registry');
         const registry_token = core_1.getInput('registry-token');
         const dry_run = core_1.getInput('dry-run') === 'true';
         const wait = core_1.getInput('wait') !== 'false';
         const env = Object.assign({}, process.env);
         if (registry_token) {
-            env.CARGO_REGISTRY_TOKEN = registry_token;
+            let env_key = `CARGO_REGISTRY_TOKEN`;
+            if (registry) {
+                env_key = `CARGO_REGISTRIES_${registry
+                    .replace(/-/g, `_`)
+                    .toUpperCase()}_TOKEN`;
+            }
+            core_1.info(`Setting environment variable ${env_key}`);
+            env[env_key] = registry_token;
         }
         const github = github_1.githubHandle(token);
         try {
@@ -196,7 +204,11 @@ function run() {
             for (const package_name of sorted_packages) {
                 const package_info = packages[package_name];
                 if (!package_info.published) {
-                    const exec_args = ['publish', ...args];
+                    let exec_args = ['publish', ...args];
+                    if (registry) {
+                        core_1.info(`Publishing to registry ${registry}`);
+                        exec_args = [...exec_args, `--registry`, registry];
+                    }
                     const exec_opts = {
                         cwd: package_info.path,
                         env

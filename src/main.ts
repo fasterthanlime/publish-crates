@@ -14,13 +14,21 @@ async function run(): Promise<void> {
     const args = getInput('args')
         .split(/[\n\s]+/)
         .filter(arg => arg.length > 0)
+    const registry = getInput('registry')
     const registry_token = getInput('registry-token')
     const dry_run = getInput('dry-run') === 'true'
     const wait = getInput('wait') !== 'false'
 
     const env: EnvVars = {...(process.env as EnvVars)}
     if (registry_token) {
-        env.CARGO_REGISTRY_TOKEN = registry_token
+        let env_key = `CARGO_REGISTRY_TOKEN`
+        if (registry) {
+            env_key = `CARGO_REGISTRIES_${registry
+                .replace(/-/g, `_`)
+                .toUpperCase()}_TOKEN`
+        }
+        info(`Setting environment variable ${env_key}`)
+        env[env_key] = registry_token
     }
 
     const github = githubHandle(token)
@@ -40,7 +48,11 @@ async function run(): Promise<void> {
         for (const package_name of sorted_packages) {
             const package_info = packages[package_name]
             if (!package_info.published) {
-                const exec_args = ['publish', ...args]
+                let exec_args = ['publish', ...args]
+                if (registry) {
+                    info(`Publishing to registry ${registry}`)
+                    exec_args = [...exec_args, `--registry`, registry]
+                }
                 const exec_opts: ExecOptions = {
                     cwd: package_info.path,
                     env
@@ -58,10 +70,15 @@ async function run(): Promise<void> {
                     await exec('cargo', exec_args, exec_opts)
                     if (wait) {
                         info(`Waiting for crate to show up in registry...`)
-                        await awaitCrateVersion(package_name, package_info.version)
+                        await awaitCrateVersion(
+                            package_name,
+                            package_info.version
+                        )
                         info(`Package '${package_name}' published successfully`)
                     } else {
-                        info(`Not waiting for crate to show up in registry ('wait: false' was specified)`)
+                        info(
+                            `Not waiting for crate to show up in registry ('wait: false' was specified)`
+                        )
                     }
                 }
             }
